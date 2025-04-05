@@ -1,0 +1,35 @@
+# CLion IDE files
+.idea/
+*.iml
+
+# Build Files
+cmake-build-debug/
+cmake-build-release/
+cmake-build-*/
+CMakeLists.txt.user
+*.o
+*.obj
+*.so
+*.dylib
+*.dll
+*.exe
+*.out
+*.a
+*.lib
+
+# CMake Cache
+CMakeCache.txt
+CMakeFiles/
+Testing/
+Makefile
+cmake_install.cmake
+compile_commands.json
+
+# Log
+*.log
+*.tmp
+*.swp
+*.swo
+
+# CLion Run/Debug Configurations
+run/
