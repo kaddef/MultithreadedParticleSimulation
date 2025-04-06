@@ -30,6 +30,8 @@ add_executable(MultithreadedParticleSimulation main.cpp
         Particles.h
         ThreadedSolver.cpp
         ThreadedSolver.h
+        Renderer.cpp
+        Renderer.h
 )
 
 target_include_directories(MultithreadedParticleSimulation PRIVATE ${raylib_INCLUDE_DIRS})

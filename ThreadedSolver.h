@@ -18,7 +18,7 @@ public:
     float dampening = 0.9f;
     const float influenceRadius = 100.0f;
     const float mouseStrength = 8000.0f;
-    static constexpr int gridSize = 100.f;
+    static constexpr int gridSize = 20.f;
     std::vector<int> grids [800/gridSize][800/gridSize];
 
 
