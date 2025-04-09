@@ -17,8 +17,8 @@ void ThreadedSolver::Update() {
         this->HandleInput();
         this->ApplyGravity();
         this->HandleBorder();
-        this->UpdateParticles(substepDt);
         this->SpatialCollision();
+        this->UpdateParticles(substepDt);
         this->UpdateGrid();
     }
 }
@@ -29,6 +29,9 @@ void ThreadedSolver::UpdateParticles(float dt) {
 
         const Vector2& pos = particles.positions[id];
         particles.gridPos[id] = {std::floor(pos.x/gridSize), std::floor(pos.y/gridSize)};
+
+        Vector2 vel = particles.GetVelocity(id);
+        if (vel.x * vel.x + vel.y * vel.y > 2 * gridSize) particles.SetVelocity(id, {0.0f, 0.0f}, 1.0);
     }
 }
 
@@ -111,6 +114,12 @@ void ThreadedSolver::CollideCells(int x1, int y1, int x2, int y2) {
 
                 p2.x += particle2Pullback.x;
                 p2.y += particle2Pullback.y;
+
+                // Try
+                Vector2 p1Vel = particles.GetVelocity(id1);
+                Vector2 p2Vel = particles.GetVelocity(id2);
+                if (Vector2Length(p1Vel) > 2 * gridSize) particles.SetVelocity(id1, {0.0f, 0.0f}, 1.0);
+                if (Vector2Length(p2Vel) > 2 * gridSize) particles.SetVelocity(id2, {0.0f, 0.0f}, 1.0);
             }
         }
     }
@@ -120,8 +129,8 @@ void ThreadedSolver::InitiateParticles(int maxCount) {
     if (spawnComplete) return;
     if (spawnClock < spawnDelay) { spawnClock+=GetFrameTime(); return; }
 
-    for (float i = 0; i < 10; i++) {
-        int particleId = particles.InsertParticle({100,50 + i * 20}, RED, gridSize);
+    for (float i = 0; i < 20; i++) {
+        int particleId = particles.InsertParticle({50 + i * 20,50}, RED, gridSize);
         particles.SetVelocity(particleId, {500,500}, dt / static_cast<float>(substeps));
     }
     spawnClock = 0;

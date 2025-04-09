@@ -11,19 +11,19 @@ int main()
     InitWindow(screenWidth, screenHeight, "Particle Simulation");
     SetTargetFPS(60);
 
-    Particles particles(7000);
-    Renderer renderer(particles, true);
+    Particles particles(5000);
+    Renderer renderer(particles, false);
     ThreadedSolver solver(particles);
 
     while (!WindowShouldClose())
     {
-        solver.InitiateParticles(7000);
+        solver.InitiateParticles(5000);
 
         if (IsKeyDown(KEY_SPACE)) renderer.GetCurrentState();
         solver.Update();
 
         BeginDrawing();
-        ClearBackground(BROWN);
+        ClearBackground(BLACK);
         // solver.DrawDebugLines();
         renderer.Draw();
         DrawFPS(10,10);
