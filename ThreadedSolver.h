@@ -16,10 +16,15 @@ public:
     float dt = 1.0f / 60.0f; // Its fixed to 60 fps use GetFrameTime()
     int substeps = 8;
     float dampening = 0.9f;
+    float accumulator = 0;
     const float influenceRadius = 100.0f;
     const float mouseStrength = 8000.0f;
-    static constexpr int gridSize = 20.f;
-    std::vector<int> grids [800/gridSize][800/gridSize];
+    static constexpr int gridSize = 32.0f;
+    static constexpr int gridRowCount = 1024 / gridSize;
+    static constexpr int gridColCount = 1024 / gridSize;
+    static constexpr int totalGridCells = gridRowCount * gridColCount;
+    // std::vector<int> grids [800/gridSize][800/gridSize];
+    std::vector<int> grids [totalGridCells];
 
 
     bool spawnComplete = false;
@@ -45,7 +50,15 @@ public:
     void MousePush(Vector2 mousePos);
     void MousePull(Vector2 mousePos);
 
+    inline int GetGridIndex(int x, int y) { 
+        return y * gridRowCount + x; 
+    }
+    inline int GetGridIndex(const Vector2& pos) { 
+        return static_cast<int>(pos.y/gridSize) * gridRowCount + static_cast<int>(pos.x/gridSize); 
+    }
+
     void DrawDebugLines();
+    void DebugUpdate();
 };
 
 

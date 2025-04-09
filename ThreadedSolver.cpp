@@ -4,6 +4,7 @@
 
 #include "ThreadedSolver.h"
 
+#include "Benchmark.h"
 #include "raymath.h"
 #include <cmath>
 
@@ -12,6 +13,20 @@ ThreadedSolver::ThreadedSolver(Particles& particles) :
 {}
 
 void ThreadedSolver::Update() {
+    // const float substepDt = dt/static_cast<float>(substeps);
+    // for (int i = 0; i < substeps; i++) {
+    //     this->HandleInput();
+    //     this->ApplyGravity();
+    //     this->HandleBorder();
+    //     this->SpatialCollision();
+    //     this->UpdateParticles(substepDt);
+    //     this->UpdateGrid();
+    // }
+
+    accumulator += GetFrameTime();
+
+    if (accumulator <= dt) return;
+
     const float substepDt = dt/static_cast<float>(substeps);
     for (int i = 0; i < substeps; i++) {
         this->HandleInput();
@@ -21,6 +36,8 @@ void ThreadedSolver::Update() {
         this->UpdateParticles(substepDt);
         this->UpdateGrid();
     }
+
+    accumulator -= dt;
 }
 
 void ThreadedSolver::UpdateParticles(float dt) {
@@ -66,7 +83,7 @@ void ThreadedSolver::HandleBorder() {
         if (pos.y <= radius || pos.y + radius >= GetScreenHeight()) {
             const Vector2 bouncedVel = {vel.x * dampening, -vel.y * dampening};
             if (pos.y <= radius) pos.y = radius;
-            else if (pos.y + radius >= GetScreenWidth()) pos.y = GetScreenHeight() - radius;
+            else if (pos.y + radius >= GetScreenHeight()) pos.y = GetScreenHeight() - radius;
             particles.SetVelocity(id, bouncedVel, 1.0); // THIS 1.0 DT MAY BE CAUSING WAVE ARTIFACTS
         }
     }
@@ -80,10 +97,11 @@ void ThreadedSolver::SpatialCollision() {
 
     for (int i = 0; i < rowCellCount; i++) {
         for (int j = 0; j < colCellCount; j++) {
-            if (!grids[i][j].size()) continue;
+            const int currentGridIndex = GetGridIndex(i, j);
+            if (grids[currentGridIndex].empty()) continue;
             for (int k = 0; k < 5; k++) {
                 int collideX = i + dx[k], collideY = j + dy[k];
-                if (collideX < 0 || collideY < 0 || collideX >= rowCellCount || collideY >= colCellCount || !grids[collideX][collideY].size()) continue;
+                if (collideX < 0 || collideY < 0 || collideX >= rowCellCount || collideY >= colCellCount || !grids[currentGridIndex].size()) continue;
                 CollideCells(i, j, collideX, collideY);
             }
         }
@@ -91,8 +109,11 @@ void ThreadedSolver::SpatialCollision() {
 }
 
 void ThreadedSolver::CollideCells(int x1, int y1, int x2, int y2) {
-    for (int id1 : grids[x1][y1]) {
-        for (int id2 : grids[x2][y2]) {
+    const int gridIndex1 = GetGridIndex(x1, y1);
+    const int gridIndex2 = GetGridIndex(x2, y2);
+
+    for (int id1 : grids[gridIndex1]) {
+        for (int id2 : grids[gridIndex2]) {
             if (id1 == id2) continue;
             Vector2& p1 = particles.positions[id1];
             Vector2& p2 = particles.positions[id2];
@@ -130,8 +151,8 @@ void ThreadedSolver::InitiateParticles(int maxCount) {
     if (spawnClock < spawnDelay) { spawnClock+=GetFrameTime(); return; }
 
     for (float i = 0; i < 20; i++) {
-        int particleId = particles.InsertParticle({50 + i * 20,50}, RED, gridSize);
-        particles.SetVelocity(particleId, {500,500}, dt / static_cast<float>(substeps));
+        int particleId = particles.InsertParticle({780 - i * 20,10}, RED, gridSize);
+        particles.SetVelocity(particleId, {-500,-500}, dt / static_cast<float>(substeps));
     }
     spawnClock = 0;
     if (particles.count >= maxCount) spawnComplete = true;
@@ -166,6 +187,23 @@ void ThreadedSolver::MousePush(Vector2 position) {
     }
 }
 
+void ThreadedSolver::UpdateGrid() {
+    for(int i = 0; i < totalGridCells; i++) {
+        grids[i].clear();
+    }
+
+    for (int id = 0; id < particles.count; id++) {
+        const Vector2& pos = particles.positions[id];
+        const int gridIndex = GetGridIndex(pos);
+        if (gridIndex >= 0 && gridIndex < totalGridCells) {
+            #pragma omp critical
+            {
+                grids[gridIndex].push_back(id);
+            }
+        }
+    }
+}
+
 void ThreadedSolver::DrawDebugLines() {
     for (int x = 0; x < GetScreenWidth(); x+=gridSize) {
         for (int y = 0; y < GetScreenHeight(); y+=gridSize) {
@@ -175,18 +213,29 @@ void ThreadedSolver::DrawDebugLines() {
     }
 }
 
-void ThreadedSolver::UpdateGrid() {
-    const int rowCellCount = GetScreenWidth()/gridSize;
-    const int colCellCount = GetScreenHeight()/gridSize;
-    for (int i = 0; i < rowCellCount; i++)
-        for (int j = 0; j < colCellCount; j++)
-            grids[i][j].clear();
-
-    for (int id = 0; id < particles.count; id++) {
-        const Vector2& gridPos = particles.gridPos[id];
-        const int cellX = static_cast<int>(gridPos.x);
-        const int cellY = static_cast<int>(gridPos.y);
-        if (cellX < 0 || cellY < 0 || cellX >= rowCellCount || cellY >= colCellCount) continue;
-        grids[cellX][cellY].push_back(id);
+void ThreadedSolver::DebugUpdate() {
+    {
+        Benchmark benchmark("Input");
+        this->HandleInput();
+    }
+    {
+        Benchmark benchmark("Gravity");
+        this->ApplyGravity();
+    }
+    {
+        Benchmark benchmark("Border");
+        this->HandleBorder();
+    }
+    {
+        Benchmark benchmark("Collision");
+        this->SpatialCollision();
+    }
+    {
+        Benchmark benchmark("Update");
+        this->UpdateParticles(dt);
+    }
+    {
+        Benchmark benchmark("Grid");
+        this->UpdateGrid();
     }
 }

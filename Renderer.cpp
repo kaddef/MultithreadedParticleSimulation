@@ -13,7 +13,10 @@
 Renderer::Renderer(Particles &particles, bool isDrawing) :
     particles(particles)
 {
-    texture = LoadTexture("../CircleTexture10x10.png");
+    Image image = LoadImage("../CircleTexture.png");
+    ImageResize(&image, 16,16);
+    texture = LoadTextureFromImage(image);
+    UnloadImage(image);
     this->isDrawing = isDrawing;
     if (isDrawing) {
         LoadColorsFromFile();
@@ -23,13 +26,13 @@ Renderer::Renderer(Particles &particles, bool isDrawing) :
 void Renderer::Draw() {
     if (isDrawing) {
         for (int index = 0; index < particles.count; index++) {
-            // DrawCircleV(positions[id], radius, colors[id]); // This draw circle centered in given position
+            // DrawCircleV(particles.positions[id], particles.radius, particles.colors[id]); // This draw circle centered in given position
             Vector2 drawPos = Vector2SubtractValue(particles.positions[index], particles.radius);
             DrawTextureV(texture, drawPos, colorQueue[index]); // White draws original texture
         }
     } else {
         for (int id = 0; id < particles.count; id++) {
-            // DrawCircleV(positions[id], radius, colors[id]); // This draw circle centered in given position
+            // DrawCircleV(particles.positions[id], particles.radius, particles.colors[id]); // This draw circle centered in given position
             Vector2 drawPos = Vector2SubtractValue(particles.positions[id], particles.radius);
             DrawTextureV(texture, drawPos, WHITE); // White draws original texture
         }

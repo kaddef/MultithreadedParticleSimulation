@@ -5,19 +5,19 @@
 
 int main()
 {
-    const int screenWidth = 800;
-    const int screenHeight = 800;
+    constexpr int screenWidth = 1024;
+    constexpr int screenHeight = 1024;
 
     InitWindow(screenWidth, screenHeight, "Particle Simulation");
     SetTargetFPS(60);
 
-    Particles particles(5000);
-    Renderer renderer(particles, false);
+    Particles particles(4580);
+    Renderer renderer(particles, true);
     ThreadedSolver solver(particles);
 
     while (!WindowShouldClose())
     {
-        solver.InitiateParticles(5000);
+        solver.InitiateParticles(4580);
 
         if (IsKeyDown(KEY_SPACE)) renderer.GetCurrentState();
         solver.Update();
@@ -32,6 +32,7 @@ int main()
         EndDrawing();
     }
 
+    solver.DebugUpdate();
     // De-Initialization
     CloseWindow();
     return 0;

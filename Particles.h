@@ -5,7 +5,7 @@
 
 struct Particles {
     int count;
-    float radius = 5.0f;
+    float radius = 8.0f;
     std::vector<Vector2> positions;
     std::vector<Vector2> lastPositions;
     std::vector<Vector2> accelerations;
