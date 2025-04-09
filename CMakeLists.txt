@@ -34,6 +34,12 @@ add_executable(MultithreadedParticleSimulation main.cpp
         Renderer.h
         Benchmark.h
         Benchmark.cpp
+        TaskQueue.h
+        TaskQueue.cpp
+        Thread.h
+        Thread.cpp
+        ThreadPool.h
+        ThreadPool.cpp
 )
 
 target_include_directories(MultithreadedParticleSimulation PRIVATE ${raylib_INCLUDE_DIRS})

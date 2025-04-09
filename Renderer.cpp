@@ -14,7 +14,7 @@ Renderer::Renderer(Particles &particles, bool isDrawing) :
     particles(particles)
 {
     Image image = LoadImage("../CircleTexture.png");
-    ImageResize(&image, 16,16);
+    ImageResize(&image, 8,8);
     texture = LoadTextureFromImage(image);
     UnloadImage(image);
     this->isDrawing = isDrawing;

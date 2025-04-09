@@ -4,14 +4,15 @@
 
 #ifndef THREADEDSOLVER_H
 #define THREADEDSOLVER_H
-#include <string>
 
 #include "Particles.h"
+#include "ThreadPool.h"
 
 
 class ThreadedSolver {
 public:
     Particles& particles;
+    ThreadPool& threadPool;
     Vector2 gravity = {0.0f, 1000.f};
     float dt = 1.0f / 60.0f; // Its fixed to 60 fps use GetFrameTime()
     int substeps = 8;
@@ -19,9 +20,9 @@ public:
     float accumulator = 0;
     const float influenceRadius = 100.0f;
     const float mouseStrength = 8000.0f;
-    static constexpr int gridSize = 32.0f;
-    static constexpr int gridRowCount = 1024 / gridSize;
-    static constexpr int gridColCount = 1024 / gridSize;
+    static constexpr int gridSize = 20.0f;
+    static constexpr int gridRowCount = 800 / gridSize;
+    static constexpr int gridColCount = 800 / gridSize;
     static constexpr int totalGridCells = gridRowCount * gridColCount;
     // std::vector<int> grids [800/gridSize][800/gridSize];
     std::vector<int> grids [totalGridCells];
@@ -31,7 +32,7 @@ public:
     double spawnClock = 0;
     double spawnDelay = 0.05f;
 
-    ThreadedSolver(Particles& particles);
+    ThreadedSolver(Particles& particles, ThreadPool& threadPool);
 
     void Update();
 
@@ -40,6 +41,9 @@ public:
     void HandleInput();
     void HandleBorder();
     void SpatialCollision();
+
+    //Threaded versions of the functions above
+    void ThreadedCollision();
 
     void CollideCells(int x1, int y1, int x2, int y2);
 

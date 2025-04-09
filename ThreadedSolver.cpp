@@ -8,35 +8,24 @@
 #include "raymath.h"
 #include <cmath>
 
-ThreadedSolver::ThreadedSolver(Particles& particles) :
-    particles(particles)
+ThreadedSolver::ThreadedSolver(Particles& particles, ThreadPool& threadPool) :
+    particles(particles),
+    threadPool(threadPool)
 {}
 
 void ThreadedSolver::Update() {
-    // const float substepDt = dt/static_cast<float>(substeps);
-    // for (int i = 0; i < substeps; i++) {
-    //     this->HandleInput();
-    //     this->ApplyGravity();
-    //     this->HandleBorder();
-    //     this->SpatialCollision();
-    //     this->UpdateParticles(substepDt);
-    //     this->UpdateGrid();
-    // }
-
     accumulator += GetFrameTime();
-
     if (accumulator <= dt) return;
-
     const float substepDt = dt/static_cast<float>(substeps);
     for (int i = 0; i < substeps; i++) {
         this->HandleInput();
         this->ApplyGravity();
         this->HandleBorder();
-        this->SpatialCollision();
+        // this->SpatialCollision();
+        this->ThreadedCollision();
         this->UpdateParticles(substepDt);
         this->UpdateGrid();
     }
-
     accumulator -= dt;
 }
 
@@ -101,7 +90,7 @@ void ThreadedSolver::SpatialCollision() {
             if (grids[currentGridIndex].empty()) continue;
             for (int k = 0; k < 5; k++) {
                 int collideX = i + dx[k], collideY = j + dy[k];
-                if (collideX < 0 || collideY < 0 || collideX >= rowCellCount || collideY >= colCellCount || !grids[currentGridIndex].size()) continue;
+                if (collideX < 0 || collideY < 0 || collideX >= rowCellCount || collideY >= colCellCount || grids[currentGridIndex].empty()) continue;
                 CollideCells(i, j, collideX, collideY);
             }
         }
@@ -146,12 +135,61 @@ void ThreadedSolver::CollideCells(int x1, int y1, int x2, int y2) {
     }
 }
 
+void ThreadedSolver::ThreadedCollision() {
+    int sliceCount = threadPool.numberOfThreads * 2;
+    int sliceSize = gridRowCount / sliceCount;
+    //Left pass
+    for (int i = 0; i < threadPool.numberOfThreads; i++) {
+        threadPool.taskQueue.AddTask([this, i, sliceSize]{
+            const int start = 2 * i * sliceSize;
+            const int end = start + sliceSize;
+            int dx[] = {1, 1, 0, 0, -1};
+            int dy[] = {0, 1, 0, 1, 1};
+            for (int i = start; i < end; i++) {
+                 for (int j = 0; j < gridRowCount; j++) {
+                     const int currentGridIndex = GetGridIndex(i, j);
+                     if (grids[currentGridIndex].empty()) continue;
+
+                     for (int k = 0; k < 5; k++) {
+                         int collideX = i + dx[k], collideY = j + dy[k];
+                         if (collideX < 0 || collideY < 0 || collideX >= gridColCount || collideY >= gridRowCount || grids[currentGridIndex].empty()) continue;
+                         CollideCells(i, j, collideX, collideY);
+                     }
+                 }
+            }
+        });
+    }
+    threadPool.taskQueue.WaitUntilDone();
+    //Right pass
+    for (int i = 0; i < threadPool.numberOfThreads; i++) {
+        threadPool.taskQueue.AddTask([this, i, sliceSize]{
+            const int start = (2 * i + 1) * sliceSize;
+            const int end = start + sliceSize;
+            int dx[] = {1, 1, 0, 0, -1};
+            int dy[] = {0, 1, 0, 1, 1};
+            for (int i = start; i < end; i++) {
+                 for (int j = 0; j < gridRowCount; j++) {
+                     const int currentGridIndex = GetGridIndex(i, j);
+                     if (grids[currentGridIndex].empty()) continue;
+
+                     for (int k = 0; k < 5; k++) {
+                         int collideX = i + dx[k], collideY = j + dy[k];
+                         if (collideX < 0 || collideY < 0 || collideX >= gridColCount || collideY >= gridRowCount || grids[currentGridIndex].empty()) continue;
+                         CollideCells(i, j, collideX, collideY);
+                     }
+                 }
+            }
+        });
+    }
+    threadPool.taskQueue.WaitUntilDone();
+}
+
 void ThreadedSolver::InitiateParticles(int maxCount) {
     if (spawnComplete) return;
     if (spawnClock < spawnDelay) { spawnClock+=GetFrameTime(); return; }
 
     for (float i = 0; i < 20; i++) {
-        int particleId = particles.InsertParticle({780 - i * 20,10}, RED, gridSize);
+        int particleId = particles.InsertParticle({750 - i * 20,10}, RED, gridSize);
         particles.SetVelocity(particleId, {-500,-500}, dt / static_cast<float>(substeps));
     }
     spawnClock = 0;
@@ -188,10 +226,12 @@ void ThreadedSolver::MousePush(Vector2 position) {
 }
 
 void ThreadedSolver::UpdateGrid() {
+    #pragma omp parallel for
     for(int i = 0; i < totalGridCells; i++) {
         grids[i].clear();
     }
 
+    #pragma omp parallel for
     for (int id = 0; id < particles.count; id++) {
         const Vector2& pos = particles.positions[id];
         const int gridIndex = GetGridIndex(pos);
@@ -228,7 +268,8 @@ void ThreadedSolver::DebugUpdate() {
     }
     {
         Benchmark benchmark("Collision");
-        this->SpatialCollision();
+        // this->SpatialCollision();
+        this->ThreadedCollision();
     }
     {
         Benchmark benchmark("Update");
