@@ -109,27 +109,60 @@ void ThreadedSolver::CollideCells(int x1, int y1, int x2, int y2) {
             float radius = particles.radius;
 
             const Vector2 collisionAxis = Vector2Subtract(p1, p2);
-            const float distance = Vector2Distance(p1, p2);
+            const float distance = Vector2Length(collisionAxis);
             const float centerToCenter = 2 * radius;
 
             if (distance < centerToCenter) {
-                const float overlap = std::abs(centerToCenter - distance);
-                const Vector2 normal = Vector2Normalize(collisionAxis);
+                if (distance > 0.0001f) {
+                    const float overlap = std::abs(centerToCenter - distance);
+                    const Vector2 normal = Vector2Normalize(collisionAxis);
 
-                const Vector2 particle1Pullback = Vector2Scale(normal, overlap*(radius/(radius + radius))); // This much radius is for if radius of particles are not same
-                const Vector2 particle2Pullback = Vector2Scale(normal, -overlap*(radius/(radius + radius)));
+                    const float correctionFactor = 0.5f; // Adjust between 0-1 for softer or harder corrections
+                    const float mass1 = 1.0f;
+                    const float mass2 = 1.0f;
+                    const float totalMass = mass1 + mass2;
 
-                p1.x += particle1Pullback.x;
-                p1.y += particle1Pullback.y;
+                    const Vector2 particle1Correction = {
+                        normal.x * overlap * (mass2/totalMass) * correctionFactor,
+                        normal.y * overlap * (mass2/totalMass) * correctionFactor
+                    };
 
-                p2.x += particle2Pullback.x;
-                p2.y += particle2Pullback.y;
+                    const Vector2 particle2Correction = {
+                        -normal.x * overlap * (mass1/totalMass) * correctionFactor,
+                        -normal.y * overlap * (mass1/totalMass) * correctionFactor
+                    };
 
-                // Try
-                Vector2 p1Vel = particles.GetVelocity(id1);
-                Vector2 p2Vel = particles.GetVelocity(id2);
-                if (Vector2Length(p1Vel) > 2 * gridSize) particles.SetVelocity(id1, {0.0f, 0.0f}, 1.0);
-                if (Vector2Length(p2Vel) > 2 * gridSize) particles.SetVelocity(id2, {0.0f, 0.0f}, 1.0);
+                    p1.x += particle1Correction.x;
+                    p1.y += particle1Correction.y;
+
+                    p2.x += particle2Correction.x;
+                    p2.y += particle2Correction.y;
+                } else {
+                    // Handle the case where particles are exactly on top of each other
+                    // Push them away in a semi-random direction
+                    const float pushDistance = radius * 0.1f;
+                    Vector2 pushDir = {
+                        static_cast<float>(id1 % 7 - 3) * 0.1f,
+                        static_cast<float>(id2 % 5 - 2) * 0.1f
+                    };
+
+                    if (Vector2Length(pushDir) < 0.0001f) {
+                        pushDir.x = 0.1f;
+                        pushDir.y = 0.1f;
+                    }
+
+                    // Normalize and apply push
+                    float pushLen = Vector2Length(pushDir);
+                    if (pushLen > 0) {
+                        pushDir.x = pushDir.x / pushLen * pushDistance;
+                        pushDir.y = pushDir.y / pushLen * pushDistance;
+
+                        p1.x += pushDir.x;
+                        p1.y += pushDir.y;
+                        p2.x -= pushDir.x;
+                        p2.y -= pushDir.y;
+                    }
+                }
             }
         }
     }

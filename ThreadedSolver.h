@@ -14,17 +14,16 @@ public:
     Particles& particles;
     ThreadPool& threadPool;
     Vector2 gravity = {0.0f, 1000.f};
-    float dt = 1.0f / 60.0f; // Its fixed to 60 fps use GetFrameTime()
+    float dt = 1.0f / 60.0f;
     int substeps = 8;
-    float dampening = 0.9f;
+    float dampening = 0.99f;
     float accumulator = 0;
     const float influenceRadius = 100.0f;
     const float mouseStrength = 8000.0f;
-    static constexpr int gridSize = 20.0f;
-    static constexpr int gridRowCount = 800 / gridSize;
-    static constexpr int gridColCount = 800 / gridSize;
+    static constexpr int gridSize = 8.0f;
+    static constexpr int gridRowCount = 1024 / gridSize;
+    static constexpr int gridColCount = 1024 / gridSize;
     static constexpr int totalGridCells = gridRowCount * gridColCount;
-    // std::vector<int> grids [800/gridSize][800/gridSize];
     std::vector<int> grids [totalGridCells];
 
 

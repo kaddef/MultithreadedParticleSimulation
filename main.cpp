@@ -5,10 +5,10 @@
 
 int main()
 {
-    constexpr int screenWidth = 800;
-    constexpr int screenHeight = 800;
-    constexpr int particleCount = 11000;
-    constexpr int threadCount = 5;
+    constexpr int screenWidth = 1024;
+    constexpr int screenHeight = 1024;
+    constexpr int particleCount = 10000;
+    constexpr int threadCount = 16;
 
     InitWindow(screenWidth, screenHeight, "Particle Simulation");
     SetTargetFPS(60);
@@ -35,7 +35,7 @@ int main()
         EndDrawing();
     }
 
-    // solver.DebugUpdate();
+    solver.DebugUpdate();
     // De-Initialization
     CloseWindow();
     return 0;
